@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--  status="OFF"，可以去掉，它的含义为是否记录log4j2本身的event信息，默认是OFF -->
+<configuration status="OFF">
+    <!-- 定义下面的引用名 -->
+    <!--
+        自定义格式：
+            %t：线程名称
+            %p：日志级别
+            %c：日志消息所在类名
+            %m：消息内容
+            %M：输出执行方法
+            %d：发生时间，%d{yyyy-MM-dd HH:mm:ss,SSS}，输出类似：2018-10-18 22:10:28,921
+            %x: 输出和当前线程相关联的NDC(嵌套诊断环境),尤其用到像java servlets这样的多客户多线程的应用中。
+            %L：代码中的行数
+            %n：换行
+        -->
+    <Properties>
+        <property name="log_pattern">%d{yyyy-MM-dd HH:mm:ss z} %-5p %c{36} %L %M - %m%x%n</property>
+        <property name="file_name">logs/msg.log</property>
+        <property name="file_info">logs/info.log</property>
+        <property name="rolling_file_name">logs/app-%d{yyyy-MM-dd}-%i.log.gz</property>
+        <property name="every_file_size">5M</property><!-- 日志切割的最小单位 -->
+        <property name="output_log_level">debug</property><!-- 日志输出级别 -->
+    </Properties>
+    <!--先定义所有的appender-->
+    <!-- 日志级别
+            trace：追踪，就是程序推进一下，可以写个trace输出
+            debug：调试，一般作为最低级别，trace基本不用。
+            info：输出重要的信息，使用较多
+            warn：警告，有些信息不是错误信息，但也要给一些提示。
+            error：错误信息。用的也很多。
+            fatal：致命错误。级别较高.
+     -->
+    <appenders>
+        <!--Appenders节点，常见的有三种子节点:Console、RollingFile、File.-->
+        <!-- Console
+        name :给loggers调用
+        target:SYSTEM_OUT 或 SYSTEM_ERR,一般只设置默认:SYSTEM_OUT.
+        -->
+        <Console name="Console" target="SYSTEM_OUT">
+            <!--控制台只输出level及以上级别的信息（onMatch），其他的直接拒绝（onMismatch）-->
+            <ThresholdFilter level="trace" onMatch="ACCEPT" onMismatch="DENY"></ThresholdFilter>
+            <!--输出日志的格式-->
+            <PatternLayout pattern="${log_pattern}"></PatternLayout>
+        </Console>
+        <!--File
+        fileName:指定输出日志的目的文件带全路径的文件名.
+        append:决定是否添加还是重新建文件会打印出所有信息，false这个log每次运行程序会自动清空，
+         -->
+        <File name="log" fileName="${file_name}" append="false" >
+            <PatternLayout pattern="${log_pattern}"></PatternLayout>
+            <!--输出level及以上级别的信息（onMatch），其他的直接拒绝（onMismatch）-->
+            <ThresholdFilter level="info" onMatch="ACCEPT" onMismatch="DENY"></ThresholdFilter>
+        </File>
+        <File name="logss" fileName="${file_info}" append="false" >
+            <PatternLayout pattern="${log_pattern}"></PatternLayout>
+            <ThresholdFilter level="info" onMatch="ACCEPT" onMismatch="DENY"></ThresholdFilter>
+        </File>
+        <!--RollingFile
+                       fileName:指定输出日志的目的文件带全路径的文件名.
+        PatternLayout:输出格式，不设置默认为:%m%n.
+        filePattern:指定新建日志文件的名称格式.
+        Policies:指定滚动日志的策略，就是什么时候进行新建日志文件输出日志.
+          TimeBasedTriggeringPolicy:Policies子节点，基于时间的滚动策略，interval属性用来指定多久滚动一次，默认是1 hour。modulate=true用来调整时间：比如现在是早上3am，interval是4，那么第一次滚动是在4am，接着是8am，12am...而不是7am.
+        SizeBasedTriggeringPolicy:Policies子节点，基于指定文件大小的滚动策略，size属性用来定义每个日志文件的大小.
+        DefaultRolloverStrategy:用来指定同一个文件夹下最多有几个日志文件时开始删除最旧的，创建新的(通过max属性),默认
+              这个会打印出所有的信息，每次大小超过size，则这size大小的日志会自动存入按年份-月份建立的文件夹下面并进行压缩，作为存档
+           -->
+        <!-- 按月生成归档日志，可以使用 filePattern="logs/$${date:yyyy-MM}/app-%d{MM-dd-yyyy}-%i.log.gz"
+         <RollingFile name="RollingFile" fileName="${file_name}"
+                      filePattern="${rolling_file_name}">
+             <PatternLayout pattern="${log_pattern}"></PatternLayout>
+             <SizeBasedTriggeringPolicy size="${every_file_size}"></SizeBasedTriggeringPolicy>
+         </RollingFile>
+         -->
+        <!--如果需要配置多个Rollingfile地址，还需要在root下添加appender-ref ref="RollingFile1"/>
+         <RollingFile name="RollingFile1" fileName="logs/app1.log"
+                     filePattern="logs/app1-%d{yyyy-MM-dd}-%i.log.gz">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss z} %-5level %class{36} %L %M - %msg%xEx%n"></PatternLayout>
+            <SizeBasedTriggeringPolicy size="10MB"></SizeBasedTriggeringPolicy>
+        </RollingFile>
+         -->
+    </appenders>
+    <!--定义logger
+         只有定义了logger并引入的appender，appender才会生效
+              常见的有两种:Root和Logger.
+        Root节点用来指定项目的根日志，如果没有单独指定Logger，那么就会默认使用该Root日志输出
+          level:日志输出级别，共有8个级别，按照从低到高为：All < Trace < Debug < Info < Warn < Error < Fatal < OFF.
+          AppenderRef：Root的子节点，用来指定该日志输出到哪个Appender.
+        Logger节点用来单独指定日志的形式，比如要为指定包下的class指定不同的日志级别等。
+          level:日志输出级别，共有8个级别，按照从低到高为：All < Trace < Debug < Info < Warn < Error < Fatal < OFF.
+          name:用来指定该Logger所适用的类或者类所在的包全路径,继承自Root节点.
+          AppenderRef：Logger的子节点，用来指定该日志输出到哪个Appender,
+                                 如果没有指定，就会默认继承自Root.如果指定了，
+                                 那么会在指定的这个Appender和Root的Appender中都会输出，
+                                 此时我们可以设置Logger的additivity="false"只在自定义的Appender中进行输出。
+     -->
+    <loggers>
+        <!--建立一个默认的root的logger，需要在root的level中指定输出的级别，-->
+        <Root level="trace" includeLocation="true">
+            <AppenderRef ref="log"></AppenderRef>
+            <!-- <AppenderRef ref="Console"></AppenderRef> -->
+        </Root>
+        <!-- 异步日志在程序的classpath需要加载disruptor-3.0.0.jar或者更高的版本。
+        异步日志分为两种：
+        a.全异步模式
+        这种异步日志方式，不需要修改修改原理的配置文件，Logger仍然使用<root> and <logger>
+        只需要在主程序代码开头，加一句系统属性的代码：
+        System.setProperty("Log4jContextSelector", "org.apache.logging.log4j.core.async.AsyncLoggerContextSelector");
+        b.异步和非异步混合输出模式
+         在配置文件中Logger使用<asyncRoot> or <asyncLogger>
+             -->
+    </loggers>
+</configuration>
